@@ -310,7 +310,8 @@ Read Sections 1-3 from [Tree in Tree](https://proceedings.neurips.cc/paper/2021/
 Explain in your own words what is "Tree in Tree" and how it improves on CART:
 
 ```{r}
-### YOUR ANSWER HERE ###
+# Tree in Tree is a machine learning method for constructing a decision graph.  The decision graph is built by an iterative process of the form grow-merge-grow-merge and so on. The growing phase is done by replacing internal and leaf nodes by micro decision trees, and in the merging phase that micro decision tree in merged into the full decision graph. In that way the Tree in Tree (TnT) is forming a DAG which results in a more efficient model.
+# CART use binary trees (each internal node has two children and each node can have only one parent), thus In a DT, the nodes are not shared across different paths. However, this is not the case in the TnT method since TnT allows a situation where a node has multiple parents nodes, this implies that the DAG constructed by TnT can combine the nodes with similar behaviours to reduce model complexity and make it more efficient. also, by sharing nodes between different paths in the constructed decision graph, it enables a more compact model with less splits than in the DT case, as we can see in the example given in figure 2, where a DT requires 6 binary splits to classify the data and a TnT decision graph requires only 4 splits. 
 ```
 
 Look at the Figure 2 example. The authors demonstrate very clearly how TnT can reach a more simple model than CART on these data. Please describe what would MARS do! You can either:
@@ -323,6 +324,17 @@ df <- expand.grid(x1 = 1:3, x2 = 1:3)
 df$y <- c(1, 0, 1, 0, 0, 0, 1, 0, 1) #1: triangle, 0: circle
 
 # plot(df$x1, df$x2, pch = df$y + 1)
+#install.packages("earth")
+library(earth)
+
+#earth::earth(y ~ x1*x2, data = df, degree = 2, thresh = 0, penalty = -1)
+
+earth_model <- earth(y ~ x1*x2, data = df, degree = 2, thresh = 0, penalty = -1)
+
+summary(earth_model)
+plotmo(earth_model)
+predictions <- predict(earth_model, newdata = df)
+predictions
 ```
 
 Isn't MARS amazing?

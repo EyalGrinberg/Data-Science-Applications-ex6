@@ -1,0 +1,78 @@
+---
+title: "file_for_testing"
+author: "Eyal Grinberg & Yam Rozen"
+date: "2023-06-15"
+output: html_document
+---
+
+```{r}
+df_test1 <- read_csv("data/df_test1.csv")
+```
+
+```{r}
+x_test <- df_test1 %>% select(-c("brand", "location"))
+x_test <- x_test %>% mutate(id = ...1) %>% select(-c("...1", "Unnamed: 0"))
+```
+
+
+```{r}
+#Preprocessing
+# let's drop features with more than 5000 missing values
+x_test <- x_test[, -column_to_remove]
+```
+
+
+```{r}
+x_test <- x_test %>% mutate_if(is.numeric, ~replace_na(.,0))
+x_test <- x_test %>% mutate_if(is.character, ~replace_na(.,"Unknown"))
+```
+
+
+```{r}
+# we are using the list of styles 'less_than_5' from the training
+x_test$style[x_test$style %in% less_than_5] <- "less than 5 appearances"
+```
+
+
+```{r}
+x_test$new_brand[x_test$new_brand %in% less_than_10_brand] <- "less than 10 appearances"
+```
+
+
+```{r}
+# factorize numeric vars
+x_test$free_shipping <- as.factor(x_test$free_shipping)
+x_test$longtime_member <- as.factor(x_test$longtime_member)
+x_test$same_day_shipping <- as.factor(x_test$same_day_shipping)
+x_test$fast_safe_shipping <- as.factor(x_test$fast_safe_shipping)
+x_test$returns <- as.factor(x_test$returns)
+x_test$feedback <- as.factor(x_test$feedback)
+
+# factorize some categorial vars
+x_test$style <- as.factor(x_test$style)
+x_test$condition <- as.factor(x_test$condition)
+x_test$category <- as.factor(x_test$category)
+x_test$new_brand <- as.factor(x_test$new_brand)
+x_test$new_country <- as.factor(x_test$new_country)
+```
+
+
+```{r}
+summary(x_test)
+```
+
+
+```{r}
+pred_model_RF_01 <- predict(mod_rf, x_test)
+
+x_test1 <- x_test %>% mutate(price_pred_RF = pred_model_RF_01$.pred)
+
+x_test1 %>%
+  select(id, price_pred_RF) %>% write_csv("model_RF_01.csv")
+```
+
+
+```{r}
+result_RF_test
+```
+

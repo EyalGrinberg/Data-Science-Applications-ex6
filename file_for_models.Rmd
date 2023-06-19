@@ -1,0 +1,167 @@
+---
+title: "hw6_new_file_model"
+author: "Eyal Grinberg & Yam Rozen"
+date: "2023-06-12"
+output: html_document
+---
+
+```{r}
+#install.packages("naniar")
+library(naniar)
+
+# let's explore missing values
+vis_miss(shoes_train)
+gg_miss_var(shoes_train)
+```
+
+```{r}
+df_train1 <- read_csv("data/df_train1.csv")
+```
+
+```{r}
+x_train <- df_train1 %>% select(-c("brand", "price", "location"))
+x_train <- x_train %>% mutate(id = ...1) %>% select(-c("...1", "Unnamed: 0"))
+y_train <- df_train1 %>% select(price)
+y_train <- log(y_train)
+```
+
+
+```{r}
+#Preprocessing
+# let's drop features with more than 5000 missing values
+na_counts <- colSums(is.na(x_train))
+column_to_remove <- which(na_counts > 5000)
+x_train <- x_train[, -column_to_remove]
+```
+
+
+```{r}
+x_train <- x_train %>% mutate_if(is.numeric, ~replace_na(.,0))
+x_train <- x_train %>% mutate_if(is.character, ~replace_na(.,"Unknown"))
+```
+
+
+```{r}
+# Count the occurrences of each element in the column
+counts <- table(x_train$style)
+# Get the elements that appear less than 5 times
+less_than_5 <- names(counts[counts < 5])
+# Replace elements with "less than 5 appearances"
+x_train$style[x_train$style %in% less_than_5] <- "less than 5 appearances"
+```
+
+```{r}
+# Count the occurrences of each element in the column
+counts_brand <- table(x_train$new_brand)
+# Get the elements that appear less than 10 times
+less_than_10_brand <- names(counts_brand[counts_brand < 10])
+# Replace elements with "less than 10 appearances"
+x_train$new_brand[x_train$new_brand %in% less_than_10_brand] <- "less than 10 appearances"
+```
+
+
+
+
+```{r}
+# factorize numeric vars
+x_train$free_shipping <- as.factor(x_train$free_shipping)
+x_train$longtime_member <- as.factor(x_train$longtime_member)
+x_train$same_day_shipping <- as.factor(x_train$same_day_shipping)
+x_train$fast_safe_shipping <- as.factor(x_train$fast_safe_shipping)
+x_train$returns <- as.factor(x_train$returns)
+x_train$feedback <- as.factor(x_train$feedback)
+
+# factorize some categorial vars
+x_train$style <- as.factor(x_train$style)
+x_train$condition <- as.factor(x_train$condition)
+x_train$category <- as.factor(x_train$category)
+x_train$new_brand <- as.factor(x_train$new_brand)
+x_train$new_country <- as.factor(x_train$new_country)
+```
+
+
+```{r}
+summary(x_train)
+```
+
+```{r}
+all_data_after_processing <- cbind(x_train, y_train)
+```
+
+
+```{r}
+#split  data
+set.seed(42)
+shoes_split <- initial_split(all_data_after_processing, prop = 0.8)
+shoes_train_tr <- training(shoes_split)
+shoes_train_te <- testing(shoes_split)
+
+# let's drop title and id 
+id_title_train_tr <- shoes_train_tr %>% select(c("id", "title"))
+id_title_train_te <- shoes_train_te %>% select(c("id", "title"))
+shoes_train_tr <- shoes_train_tr %>% select(-c("id", "title"))
+shoes_train_te <- shoes_train_te %>% select(-c("id", "title"))
+```
+
+
+
+```{r}
+# create recipe 
+shoes_rec <- recipe(price ~ ., data = shoes_train_tr)
+
+# stepping up the recipe
+shoes_rec <- shoes_rec %>% 
+  step_novel(all_nominal_predictors()) 
+
+shoes_rec <- shoes_rec %>% prep(shoes_train_tr)
+
+shoes_train_tr2 <- shoes_rec %>% bake(shoes_train_tr)
+shoes_train_te2 <- shoes_rec %>% bake(shoes_train_te)
+```
+
+
+```{r}
+# fit RF
+mod_rf <- rand_forest(mode = "regression", mtry = 8, trees = 100, min_n = 15) %>%
+  set_engine("ranger") %>%
+  fit_xy(x = shoes_train_tr2 %>% select(-price),
+         y = shoes_train_tr2$price)
+```
+
+
+```{r}
+result_RF_train <- bind_rows(mod_rf %>% predict(new_data = shoes_train_tr2) %>%
+            mutate(truth = shoes_train_tr2$price))
+```
+
+```{r}
+result_RF_train %>% rmse(truth = truth, estimate = .pred)
+```
+
+
+```{r}
+result_RF <- bind_rows(mod_rf %>% predict(new_data = shoes_train_te2) %>%
+            mutate(truth = shoes_train_te2$price))
+```
+
+```{r}
+result_RF %>% rmse(truth = truth, estimate = .pred)
+```
+
+
+new recipe 
+```{r}
+# create recipe 
+shoes_rec_xgb <- recipe(price ~ ., data = shoes_train_tr)
+
+# stepping up the recipe
+shoes_rec_xgb <- shoes_rec_xgb %>% 
+
+  step_novel(all_nominal_predictors()) %>%
+  step_dummy(all_nominal(), one_hot = TRUE)
+
+#prep(shoes_rec_xgb)
+#juice(prep(shoes_rec_xgb))
+#SalePrice_bake <- bake(prep(shoes_rec_xgb), new_data = shoes_train_te)
+```
+
